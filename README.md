@@ -10,7 +10,7 @@
 A comprehensive, mobile-first Personal Finance Tracker built with modern web technologies. This Progressive Web App (PWA) provides enterprise-grade financial management capabilities with a focus on user experience and accessibility.
 
 ### 🚀 **Live Application**
-**[📱 Try it now: https://nirmiteep.github.io/Finance-Tracker/](https://nirmiteep.github.io/Finance-Tracker/)**
+**[📱 Try it now: https://nirmiteep.github.io/Finance-Tracker/)](https://nirmiteep.github.io/Finance-Tracker/))**
 
 ### 📱 **Key Features**
 
