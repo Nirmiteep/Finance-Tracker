@@ -1,0 +1,1588 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker</title>
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a472a">
+    
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Finance Tracker">
+    <link rel="apple-touch-icon" href="assets/icon.svg">
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Personal Finance Tracker - Track income, expenses, and convert currencies worldwide. Manage your finances with ease.">
+    <meta name="keywords" content="finance, money, budget, expense tracker, income, currency converter, personal finance">
+    <meta name="author" content="Finance Tracker App">
+    
+    <!-- Social Media Meta Tags -->
+    <meta property="og:title" content="Personal Finance Tracker">
+    <meta property="og:description" content="Track your income, expenses, and convert currencies worldwide">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="assets/icon.svg">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <!-- Load Chart.js UMD build so `Chart` is available as a global -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="fixes.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a472a;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .balance-card {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            margin-bottom: 30px;
+            text-align: center;
+            border: 2px solid #27ae60;
+        }
+
+        .balance-amount {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+
+        .balance-breakdown {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+        }
+
+        .balance-item {
+            text-align: center;
+        }
+
+        .balance-item .amount {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .income { color: #27ae60; }
+        .expense { color: #e74c3c; }
+
+        .nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 18px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .nav-tab.active {
+            background: rgba(39, 174, 96, 0.5);
+            font-weight: bold;
+            color: #fff;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            border: 2px solid rgba(39, 174, 96, 0.3);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-section {
+            background: #f8fffe;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e8f5e8;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.1);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e8f5e8;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #27ae60;
+            box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.2);
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .form-group input:invalid {
+            border-color: #e74c3c;
+        }
+
+        .form-group input:valid:not(:focus) {
+            border-color: #27ae60;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+        }
+
+        .btn-danger:active {
+            transform: translateY(0);
+        }
+
+        /* Ensure delete buttons work properly on touch devices */
+        .delete-btn-mobile {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .currency-converter {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 20px;
+            align-items: end;
+            margin-bottom: 20px;
+        }
+
+        .convert-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.3);
+        }
+
+        .convert-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(39, 174, 96, 0.4);
+        }
+
+        .transaction-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s ease;
+        }
+
+        .transaction-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .transaction-info {
+            flex: 1;
+        }
+
+        .transaction-description {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .transaction-meta {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .transaction-amount {
+            font-weight: bold;
+            font-size: 1.4rem;
+        }
+
+        .chart-container {
+            margin: 20px 0;
+            height: 300px;
+            position: relative;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .month-selector-row {
+            margin-bottom: 20px;
+        }
+
+        .monthly-breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .monthly-breakdown-table th,
+        .monthly-breakdown-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e8f5e8;
+        }
+
+        .monthly-breakdown-table th {
+            background-color: #f0f8f0;
+            font-weight: 600;
+            color: #27ae60;
+        }
+
+        .export-controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Enhanced Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .balance-amount {
+                font-size: 2rem;
+            }
+            
+            .currency-converter {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .nav-tabs {
+                flex-wrap: wrap;
+                padding: 3px;
+            }
+            
+            .nav-tab {
+                min-width: 100px;
+                padding: 12px 8px;
+                font-size: 0.9rem;
+            }
+            
+            .form-group input,
+            .form-group select {
+                padding: 15px 12px;
+                font-size: 16px; /* Prevents zoom on iOS */
+                border-radius: 8px;
+            }
+            
+            .btn {
+                padding: 15px;
+                font-size: 16px;
+                border-radius: 8px;
+                margin-top: 20px;
+            }
+            
+            .transaction-item {
+                flex-direction: column;
+                text-align: left;
+                gap: 10px;
+                position: relative;
+            }
+            
+            .transaction-amount {
+                width: 100%;
+                text-align: center;
+                padding: 10px;
+            }
+            
+            .mobile-transaction-controls {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 10px;
+            }
+            
+            .delete-btn-mobile {
+                background: #e74c3c;
+                color: white;
+                border: none;
+                padding: 10px 15px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                min-width: 80px;
+                touch-action: manipulation;
+            }
+            
+            .delete-btn-mobile:hover,
+            .delete-btn-mobile:active {
+                background: #c0392b;
+                transform: scale(0.98);
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .tab-content {
+                padding: 15px;
+            }
+        }
+
+        /* Improved Touch Targets for Mobile */
+        @media (max-width: 480px) {
+            .nav-tab {
+                min-width: 80px;
+                padding: 10px 6px;
+                font-size: 0.8rem;
+            }
+            
+            .form-group input,
+            .form-group select {
+                padding: 18px 15px;
+                font-size: 17px; /* Optimal for mobile */
+            }
+            
+            .btn {
+                padding: 18px;
+                font-size: 17px;
+            }
+            
+            .transaction-item {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="bi bi-wallet2"></i> Personal Finance Tracker</h1>
+            <p>Track your income, expenses, and convert currencies worldwide</p>
+        </div>
+
+        <div class="balance-card">
+            <div class="balance-amount" id="totalBalance">$0.00</div>
+            <div class="balance-breakdown">
+                <div class="balance-item">
+                    <div class="amount income" id="totalIncome">$0.00</div>
+                    <div>Total Income</div>
+                </div>
+                <div class="balance-item">
+                    <div class="amount expense" id="totalExpense">$0.00</div>
+                    <div>Total Expense</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('converter', this)">
+                <i class="bi bi-currency-exchange"></i> Currency Converter
+            </button>
+            <button class="nav-tab" onclick="switchTab('income', this)">
+                <i class="bi bi-plus-circle"></i> Add Income
+            </button>
+            <button class="nav-tab" onclick="switchTab('expense', this)">
+                <i class="bi bi-dash-circle"></i> Add Expense
+            </button>
+            <button class="nav-tab" onclick="switchTab('history', this)">
+                <i class="bi bi-clock-history"></i> History & Analytics
+            </button>
+        </div>
+
+        <!-- Currency Converter Tab -->
+        <div id="converter" class="tab-content active">
+            <h2><i class="bi bi-currency-exchange"></i> Currency Converter</h2>
+            <div class="form-section">
+                <div class="currency-converter">
+                    <div class="form-group">
+                        <label for="fromAmount">Amount</label>
+                        <input type="number" id="fromAmount" placeholder="Enter amount" min="0" step="0.01">
+                        <label for="fromCurrency">From</label>
+                        <select id="fromCurrency"></select>
+                    </div>
+                    <button class="convert-btn" onclick="convertCurrency()" title="Convert currency">
+                        <i class="bi bi-arrow-left-right"></i>
+                    </button>
+                    <div class="form-group">
+                        <label for="toAmount">Converted Amount</label>
+                        <input type="number" id="toAmount" placeholder="Converted amount" readonly>
+                        <label for="toCurrency">To</label>
+                        <select id="toCurrency"></select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Income Tab -->
+        <div id="income" class="tab-content">
+            <h2><i class="bi bi-plus-circle"></i> Add Income</h2>
+            <div class="form-section">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="incomeAmount">Amount</label>
+                        <input type="number" id="incomeAmount" placeholder="Enter income amount" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeSource">Source</label>
+                        <input type="text" id="incomeSource" placeholder="e.g., Salary, Freelance" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="incomeCategory">Category</label>
+                        <select id="incomeCategory" required>
+                            <option value="">Select category</option>
+                            <option value="salary">Salary</option>
+                            <option value="freelance">Freelance</option>
+                            <option value="business">Business</option>
+                            <option value="investment">Investment</option>
+                            <option value="rental">Rental</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeDate">Date</label>
+                        <input type="date" id="incomeDate" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="incomeCurrency">Currency</label>
+                        <select id="incomeCurrency"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeNotes">Notes (Optional)</label>
+                        <input type="text" id="incomeNotes" placeholder="Additional notes">
+                    </div>
+                </div>
+                <button class="btn" onclick="addIncome()">
+                    <i class="bi bi-plus"></i> Add Income
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Expense Tab -->
+        <div id="expense" class="tab-content">
+            <h2><i class="bi bi-dash-circle"></i> Add Expense</h2>
+            <div class="form-section">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expenseAmount">Amount</label>
+                        <input type="number" id="expenseAmount" placeholder="Enter expense amount" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseDescription">Description</label>
+                        <input type="text" id="expenseDescription" placeholder="e.g., Grocery shopping" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expenseCategory">Category</label>
+                        <select id="expenseCategory" required>
+                            <option value="">Select category</option>
+                            <option value="food">Food & Dining</option>
+                            <option value="transportation">Transportation</option>
+                            <option value="shopping">Shopping</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="education">Education</option>
+                            <option value="travel">Travel</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseDate">Date</label>
+                        <input type="date" id="expenseDate" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expenseCurrency">Currency</label>
+                        <select id="expenseCurrency"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseNotes">Notes (Optional)</label>
+                        <input type="text" id="expenseNotes" placeholder="Additional notes">
+                    </div>
+                </div>
+                <button class="btn" onclick="addExpense()">
+                    <i class="bi bi-plus"></i> Add Expense
+                </button>
+            </div>
+        </div>
+
+        <!-- History & Analytics Tab -->
+        <div id="history" class="tab-content">
+            <h2><i class="bi bi-clock-history"></i> History & Analytics</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Current Month Income</h3>
+                    <div class="value income" id="monthlyIncome">₹0.00</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Current Month Expenses</h3>
+                    <div class="value expense" id="monthlyExpense">₹0.00</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Average Daily Expense</h3>
+                    <div class="value" id="avgDailyExpense">₹0.00</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Transactions</h3>
+                    <div class="value" id="totalTransactions">0</div>
+                </div>
+            </div>
+
+            <!-- Monthly selectors and breakdown removed -->
+
+            <div class="export-controls">
+                <button class="btn" onclick="exportData()">
+                    <i class="bi bi-download"></i> Export Data
+                </button>
+                <button class="btn btn-danger" onclick="clearAllData()">
+                    <i class="bi bi-trash"></i> Clear All Data
+                </button>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="expenseChart"></canvas>
+            </div>
+
+            <h3>Recent Transactions</h3>
+            <div class="transaction-list" id="transactionList">
+                <!-- Transactions will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        let exchangeRates = {};
+        let defaultCurrency = localStorage.getItem('defaultCurrency') || 'INR';
+
+        // Comprehensive currency list covering all continents
+        const currencies = [
+            // North America
+            { code: 'USD', name: 'US Dollar', symbol: '$', continent: 'North America' },
+            { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', continent: 'North America' },
+            { code: 'MXN', name: 'Mexican Peso', symbol: '$', continent: 'North America' },
+            
+            // South America
+            { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', continent: 'South America' },
+            { code: 'ARS', name: 'Argentine Peso', symbol: '$', continent: 'South America' },
+            { code: 'CLP', name: 'Chilean Peso', symbol: '$', continent: 'South America' },
+            { code: 'COP', name: 'Colombian Peso', symbol: '$', continent: 'South America' },
+            { code: 'PEN', name: 'Peruvian Sol', symbol: 'S/', continent: 'South America' },
+            
+            // Europe
+            { code: 'EUR', name: 'Euro', symbol: '€', continent: 'Europe' },
+            { code: 'GBP', name: 'British Pound', symbol: '£', continent: 'Europe' },
+            { code: 'CHF', name: 'Swiss Franc', symbol: 'Fr', continent: 'Europe' },
+            { code: 'SEK', name: 'Swedish Krona', symbol: 'kr', continent: 'Europe' },
+            { code: 'NOK', name: 'Norwegian Krone', symbol: 'kr', continent: 'Europe' },
+            { code: 'DKK', name: 'Danish Krone', symbol: 'kr', continent: 'Europe' },
+            { code: 'PLN', name: 'Polish Zloty', symbol: 'zł', continent: 'Europe' },
+            { code: 'CZK', name: 'Czech Koruna', symbol: 'Kč', continent: 'Europe' },
+            { code: 'HUF', name: 'Hungarian Forint', symbol: 'Ft', continent: 'Europe' },
+            { code: 'RON', name: 'Romanian Leu', symbol: 'lei', continent: 'Europe' },
+            { code: 'RUB', name: 'Russian Ruble', symbol: '₽', continent: 'Europe' },
+            
+            // Asia
+            { code: 'INR', name: 'Indian Rupee', symbol: '₹', continent: 'Asia' },
+            { code: 'JPY', name: 'Japanese Yen', symbol: '¥', continent: 'Asia' },
+            { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', continent: 'Asia' },
+            { code: 'KRW', name: 'South Korean Won', symbol: '₩', continent: 'Asia' },
+            { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', continent: 'Asia' },
+            { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', continent: 'Asia' },
+            { code: 'THB', name: 'Thai Baht', symbol: '฿', continent: 'Asia' },
+            { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', continent: 'Asia' },
+            { code: 'IDR', name: 'Indonesian Rupiah', symbol: 'Rp', continent: 'Asia' },
+            { code: 'PHP', name: 'Philippine Peso', symbol: '₱', continent: 'Asia' },
+            { code: 'VND', name: 'Vietnamese Dong', symbol: '₫', continent: 'Asia' },
+            { code: 'PKR', name: 'Pakistani Rupee', symbol: '₨', continent: 'Asia' },
+            { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳', continent: 'Asia' },
+            { code: 'LKR', name: 'Sri Lankan Rupee', symbol: '₨', continent: 'Asia' },
+            
+            // Middle East
+            { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', continent: 'Middle East' },
+            { code: 'SAR', name: 'Saudi Riyal', symbol: '﷼', continent: 'Middle East' },
+            { code: 'QAR', name: 'Qatari Riyal', symbol: '﷼', continent: 'Middle East' },
+            { code: 'OMR', name: 'Omani Rial', symbol: '﷼', continent: 'Middle East' },
+            { code: 'KWD', name: 'Kuwaiti Dinar', symbol: 'د.ك', continent: 'Middle East' },
+            { code: 'BHD', name: 'Bahraini Dinar', symbol: '.د.ب', continent: 'Middle East' },
+            { code: 'ILS', name: 'Israeli Shekel', symbol: '₪', continent: 'Middle East' },
+            { code: 'TRY', name: 'Turkish Lira', symbol: '₺', continent: 'Middle East' },
+            { code: 'IRR', name: 'Iranian Rial', symbol: '﷼', continent: 'Middle East' },
+            
+            // Africa
+            { code: 'ZAR', name: 'South African Rand', symbol: 'R', continent: 'Africa' },
+            { code: 'EGP', name: 'Egyptian Pound', symbol: '£', continent: 'Africa' },
+            { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', continent: 'Africa' },
+            { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh', continent: 'Africa' },
+            { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵', continent: 'Africa' },
+            { code: 'MAD', name: 'Moroccan Dirham', symbol: 'د.م.', continent: 'Africa' },
+            { code: 'TND', name: 'Tunisian Dinar', symbol: 'د.ت', continent: 'Africa' },
+            { code: 'ETB', name: 'Ethiopian Birr', symbol: 'Br', continent: 'Africa' },
+            
+            // Oceania
+            { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', continent: 'Oceania' },
+            { code: 'NZD', name: 'New Zealand Dollar', symbol: 'NZ$', continent: 'Oceania' },
+            { code: 'FJD', name: 'Fijian Dollar', symbol: 'FJ$', continent: 'Oceania' }
+        ];
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            populateCurrencySelectors();
+            loadTransactions();
+            updateBalance();
+            updateStats();
+            setDefaultDates();
+            fetchExchangeRates();
+        });
+
+        // Populate currency selectors
+        function populateCurrencySelectors() {
+            const selectors = ['fromCurrency', 'toCurrency', 'incomeCurrency', 'expenseCurrency'];
+            
+            selectors.forEach(selectorId => {
+                const selector = document.getElementById(selectorId);
+                selector.innerHTML = '';
+                
+                // Group currencies by continent
+                const continents = [...new Set(currencies.map(c => c.continent))];
+                
+                continents.forEach(continent => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = continent;
+                    
+                    currencies
+                        .filter(c => c.continent === continent)
+                        .forEach(currency => {
+                            const option = document.createElement('option');
+                            option.value = currency.code;
+                            option.textContent = `${currency.code} - ${currency.name}`;
+                            optgroup.appendChild(option);
+                        });
+                    
+                    selector.appendChild(optgroup);
+                });
+                
+                // Set default currency
+                selector.value = defaultCurrency;
+            });
+        }
+
+        // Set default dates to today
+        function setDefaultDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('incomeDate').value = today;
+            document.getElementById('expenseDate').value = today;
+        }
+
+        // Fetch exchange rates
+        async function fetchExchangeRates() {
+            try {
+                const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${defaultCurrency}`);
+                const data = await response.json();
+                exchangeRates = data.rates;
+            } catch (error) {
+                console.error('Error fetching exchange rates:', error);
+            }
+        }
+
+        // Currency conversion
+        async function convertCurrency() {
+            const amount = parseFloat(document.getElementById('fromAmount').value);
+            const fromCurrency = document.getElementById('fromCurrency').value;
+            const toCurrency = document.getElementById('toCurrency').value;
+
+            if (!amount || amount <= 0) {
+                alert('Please enter a valid amount greater than 0');
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://api.exchangerate-api.com/v4/latest/${fromCurrency}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch exchange rates');
+                }
+                
+                const data = await response.json();
+                
+                if (data.rates && data.rates[toCurrency]) {
+                    const convertedAmount = (amount * data.rates[toCurrency]).toFixed(2);
+                    document.getElementById('toAmount').value = convertedAmount;
+                } else {
+                    throw new Error('Currency conversion rate not available');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error converting currency. Please try again later.');
+                document.getElementById('toAmount').value = '';
+            }
+        }
+
+        // Add income
+        function addIncome() {
+            const amount = parseFloat(document.getElementById('incomeAmount').value);
+            const source = document.getElementById('incomeSource').value.trim();
+            const category = document.getElementById('incomeCategory').value;
+            const date = document.getElementById('incomeDate').value;
+            const currency = document.getElementById('incomeCurrency').value;
+            const notes = document.getElementById('incomeNotes').value.trim();
+
+            // Enhanced validation
+            if (!amount || amount <= 0) {
+                alert('Please enter a valid amount greater than 0');
+                document.getElementById('incomeAmount').focus();
+                return;
+            }
+            
+            if (!source) {
+                alert('Please enter an income source');
+                document.getElementById('incomeSource').focus();
+                return;
+            }
+            
+            if (!category) {
+                alert('Please select a category');
+                document.getElementById('incomeCategory').focus();
+                return;
+            }
+            
+            if (!date) {
+                alert('Please select a date');
+                document.getElementById('incomeDate').focus();
+                return;
+            }
+
+            const transaction = {
+                id: Date.now(),
+                type: 'income',
+                amount: amount,
+                description: source,
+                category: category,
+                date: date,
+                currency: currency,
+                notes: notes,
+                timestamp: new Date().toISOString()
+            };
+
+            transactions.push(transaction);
+            saveTransactions();
+            updateBalance();
+            updateStats();
+            loadTransactions();
+            
+            // Clear form and show success
+            clearIncomeForm();
+            
+            // Enhanced success feedback
+            alert('✅ Income added successfully!');
+            
+            // Optional: Switch to history tab to show the new transaction
+            // switchTab('history');
+        }
+
+        // Add expense
+        function addExpense() {
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const description = document.getElementById('expenseDescription').value.trim();
+            const category = document.getElementById('expenseCategory').value;
+            const date = document.getElementById('expenseDate').value;
+            const currency = document.getElementById('expenseCurrency').value;
+            const notes = document.getElementById('expenseNotes').value.trim();
+
+            // Enhanced validation
+            if (!amount || amount <= 0) {
+                alert('Please enter a valid amount greater than 0');
+                document.getElementById('expenseAmount').focus();
+                return;
+            }
+            
+            if (!description) {
+                alert('Please enter an expense description');
+                document.getElementById('expenseDescription').focus();
+                return;
+            }
+            
+            if (!category) {
+                alert('Please select a category');
+                document.getElementById('expenseCategory').focus();
+                return;
+            }
+            
+            if (!date) {
+                alert('Please select a date');
+                document.getElementById('expenseDate').focus();
+                return;
+            }
+
+            const transaction = {
+                id: Date.now(),
+                type: 'expense',
+                amount: amount,
+                description: description,
+                category: category,
+                date: date,
+                currency: currency,
+                notes: notes,
+                timestamp: new Date().toISOString()
+            };
+
+            transactions.push(transaction);
+            saveTransactions();
+            updateBalance();
+            updateStats();
+            loadTransactions();
+            
+            // Clear form and show success
+            clearExpenseForm();
+            
+            // Enhanced success feedback
+            alert('✅ Expense added successfully!');
+            
+            // Optional: Switch to history tab to show the new transaction
+            // switchTab('history');
+        }
+
+        // Enhanced form clearing functions
+        function clearIncomeForm() {
+            // Clear all input fields
+            document.getElementById('incomeAmount').value = '';
+            document.getElementById('incomeSource').value = '';
+            document.getElementById('incomeCategory').value = '';
+            document.getElementById('incomeNotes').value = '';
+            document.getElementById('incomeCurrency').value = defaultCurrency;
+            
+            // Reset date to today
+            setDefaultDates();
+            
+            // Remove any focus/active states
+            document.getElementById('incomeAmount').blur();
+            
+            // Optional: Focus on first field for better UX
+            setTimeout(() => {
+                document.getElementById('incomeAmount').focus();
+            }, 100);
+        }
+
+        function clearExpenseForm() {
+            // Clear all input fields
+            document.getElementById('expenseAmount').value = '';
+            document.getElementById('expenseDescription').value = '';
+            document.getElementById('expenseCategory').value = '';
+            document.getElementById('expenseNotes').value = '';
+            document.getElementById('expenseCurrency').value = defaultCurrency;
+            
+            // Reset date to today
+            setDefaultDates();
+            
+            // Remove any focus/active states
+            document.getElementById('expenseAmount').blur();
+            
+            // Optional: Focus on first field for better UX
+            setTimeout(() => {
+                document.getElementById('expenseAmount').focus();
+            }, 100);
+        }
+
+        // Convert amount to default currency
+        function convertToDefaultCurrency(amount, fromCurrency) {
+            if (fromCurrency === defaultCurrency || !exchangeRates[fromCurrency]) {
+                return amount;
+            }
+            // If no exchange rate available, return original amount
+            if (!exchangeRates || !exchangeRates[fromCurrency]) {
+                return amount;
+            }
+            // Convert to USD first, then to default currency
+            const usdAmount = amount / exchangeRates[fromCurrency];
+            return usdAmount * (exchangeRates[defaultCurrency] || 1);
+        }
+
+        // Get monthly statistics for specific month/year
+        function getMonthlyStats(month, year) {
+            const monthlyTransactions = transactions.filter(t => {
+                const transactionDate = new Date(t.date);
+                return transactionDate.getMonth() === month && 
+                       transactionDate.getFullYear() === year;
+            });
+
+            const income = monthlyTransactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + convertToDefaultCurrency(t.amount, t.currency), 0);
+            
+            const expense = monthlyTransactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + convertToDefaultCurrency(t.amount, t.currency), 0);
+
+            const expensesByCategory = {};
+            monthlyTransactions
+                .filter(t => t.type === 'expense')
+                .forEach(t => {
+                    const amount = convertToDefaultCurrency(t.amount, t.currency);
+                    expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + amount;
+                });
+
+            return {
+                income,
+                expense,
+                balance: income - expense,
+                transactionCount: monthlyTransactions.length,
+                expensesByCategory
+            };
+        }
+
+        // Populate month and year selectors
+        function populateMonthYearSelectors() {
+            const monthSelector = document.getElementById('monthSelector');
+            const yearSelector = document.getElementById('yearSelector');
+
+            // If selectors are removed from DOM, do nothing
+            if (!monthSelector || !yearSelector) return;
+
+            // Clear existing options
+            monthSelector.innerHTML = '<option value="current">Current Month</option>';
+            yearSelector.innerHTML = '';
+
+            // Get unique months and years from transactions
+            const dates = transactions.map(t => new Date(t.date));
+            const years = [...new Set(dates.map(d => d.getFullYear()))].sort((a, b) => b - a);
+            const currentYear = new Date().getFullYear();
+            
+            // Add current year if not in transactions
+            if (!years.includes(currentYear)) {
+                years.unshift(currentYear);
+            }
+
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                if (year === currentYear) option.selected = true;
+                yearSelector.appendChild(option);
+            });
+
+            // Add specific months that have transactions
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+
+            const uniqueMonths = new Set();
+            dates.forEach(date => {
+                const monthYear = `${date.getFullYear()}-${date.getMonth()}`;
+                uniqueMonths.add(monthYear);
+            });
+
+            Array.from(uniqueMonths).sort().forEach(monthYear => {
+                const [year, month] = monthYear.split('-').map(Number);
+                const option = document.createElement('option');
+                option.value = `${year}-${month}`;
+                option.textContent = `${monthNames[month]} ${year}`;
+                monthSelector.appendChild(option);
+            });
+        }
+
+        // Update monthly statistics based on selector
+        function updateMonthlyStats() {
+            const monthSelector = document.getElementById('monthSelector');
+            const yearSelector = document.getElementById('yearSelector');
+
+            // If selectors removed, fallback to current month/year
+            let selMonth = new Date().getMonth();
+            let selYear = new Date().getFullYear();
+            if (monthSelector && yearSelector) {
+                const selectedMonth = monthSelector.value;
+                const selectedYear = parseInt(yearSelector.value);
+
+                if (selectedMonth === 'current') {
+                    selMonth = new Date().getMonth();
+                    selYear = new Date().getFullYear();
+                } else {
+                    [selYear, selMonth] = selectedMonth.split('-').map(Number);
+                }
+            }
+
+            let month, year;
+            if (selectedMonth === 'current') {
+                month = new Date().getMonth();
+                year = new Date().getFullYear();
+            } else {
+                [year, month] = selectedMonth.split('-').map(Number);
+            }
+
+            const stats = getMonthlyStats(selMonth, selYear);
+            const currency = currencies.find(c => c.code === defaultCurrency);
+            const symbol = currency ? currency.symbol : '₹';
+
+            // Update current month stats (elements exist in UI)
+            const monthlyIncomeEl = document.getElementById('monthlyIncome');
+            const monthlyExpenseEl = document.getElementById('monthlyExpense');
+            const avgDailyExpenseEl = document.getElementById('avgDailyExpense');
+            if (monthlyIncomeEl) monthlyIncomeEl.textContent = `${symbol}${stats.income.toFixed(2)}`;
+            if (monthlyExpenseEl) monthlyExpenseEl.textContent = `${symbol}${stats.expense.toFixed(2)}`;
+
+            const daysInMonth = new Date(selYear, selMonth + 1, 0).getDate();
+            const avgDailyExpense = stats.expense / daysInMonth;
+            if (avgDailyExpenseEl) avgDailyExpenseEl.textContent = `${symbol}${avgDailyExpense.toFixed(2)}`;
+
+            // Update monthly breakdown only if its container exists
+            if (document.getElementById('monthlyData')) {
+                updateMonthlyBreakdown();
+            }
+        }
+
+        // Update monthly breakdown table
+        function updateMonthlyBreakdown() {
+            const monthlyDataDiv = document.getElementById('monthlyData');
+            if (!monthlyDataDiv) return; // monthly breakdown removed
+            const currency = currencies.find(c => c.code === defaultCurrency);
+            const symbol = currency ? currency.symbol : '₹';
+
+            // Get all unique months with transactions
+            const monthlyData = {};
+            transactions.forEach(t => {
+                const date = new Date(t.date);
+                const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+                const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = {
+                        name: monthName,
+                        income: 0,
+                        expense: 0,
+                        transactions: 0
+                    };
+                }
+                
+                const amount = convertToDefaultCurrency(t.amount, t.currency);
+                if (t.type === 'income') {
+                    monthlyData[monthKey].income += amount;
+                } else {
+                    monthlyData[monthKey].expense += amount;
+                }
+                monthlyData[monthKey].transactions++;
+            });
+
+            // Sort by date (newest first)
+            const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
+                const [yearA, monthA] = a.split('-').map(Number);
+                const [yearB, monthB] = b.split('-').map(Number);
+                if (yearA !== yearB) return yearB - yearA;
+                return monthB - monthA;
+            });
+
+            if (sortedMonths.length === 0) {
+                monthlyDataDiv.innerHTML = '<p>No transaction data available.</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="monthly-breakdown-table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Income</th>
+                            <th>Expenses</th>
+                            <th>Balance</th>
+                            <th>Transactions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            sortedMonths.forEach(monthKey => {
+                const data = monthlyData[monthKey];
+                const balance = data.income - data.expense;
+                const balanceClass = balance >= 0 ? 'income' : 'expense';
+                
+                tableHTML += `
+                    <tr>
+                        <td>${data.name}</td>
+                        <td class="income">${symbol}${data.income.toFixed(2)}</td>
+                        <td class="expense">${symbol}${data.expense.toFixed(2)}</td>
+                        <td class="${balanceClass}">${symbol}${balance.toFixed(2)}</td>
+                        <td>${data.transactions}</td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            monthlyDataDiv.innerHTML = tableHTML;
+        }
+
+        // Update balance
+        function updateBalance() {
+            const income = transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + convertToDefaultCurrency(t.amount, t.currency), 0);
+            
+            const expense = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + convertToDefaultCurrency(t.amount, t.currency), 0);
+            
+            const balance = income - expense;
+            const currency = currencies.find(c => c.code === defaultCurrency);
+            const symbol = currency ? currency.symbol : '$';
+
+            document.getElementById('totalBalance').textContent = `${symbol}${balance.toFixed(2)}`;
+            document.getElementById('totalIncome').textContent = `${symbol}${income.toFixed(2)}`;
+            document.getElementById('totalExpense').textContent = `${symbol}${expense.toFixed(2)}`;
+        }
+
+        // Update statistics
+        function updateStats() {
+            const currentMonth = new Date().getMonth();
+            const currentYear = new Date().getFullYear();
+            
+            const stats = getMonthlyStats(currentMonth, currentYear);
+            const currency = currencies.find(c => c.code === defaultCurrency);
+            const symbol = currency ? currency.symbol : '₹';
+
+            document.getElementById('monthlyIncome').textContent = `${symbol}${stats.income.toFixed(2)}`;
+            document.getElementById('monthlyExpense').textContent = `${symbol}${stats.expense.toFixed(2)}`;
+            
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const avgDailyExpense = stats.expense / daysInMonth;
+            document.getElementById('avgDailyExpense').textContent = `${symbol}${avgDailyExpense.toFixed(2)}`;
+            document.getElementById('totalTransactions').textContent = transactions.length;
+
+            // Update selectors and breakdown
+            populateMonthYearSelectors();
+            updateMonthlyBreakdown();
+            updateChart();
+        }
+
+        // Update chart
+        function updateChart() {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            
+            // Get expense categories and amounts
+            const expensesByCategory = {};
+            transactions
+                .filter(t => t.type === 'expense')
+                .forEach(t => {
+                    const amount = convertToDefaultCurrency(t.amount, t.currency);
+                    expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + amount;
+                });
+
+            const labels = Object.keys(expensesByCategory);
+            const data = Object.values(expensesByCategory);
+
+            if (window.expenseChart) {
+                window.expenseChart.destroy();
+            }
+
+            window.expenseChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Expenses by Category'
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load and display transactions
+        function loadTransactions() {
+            const transactionList = document.getElementById('transactionList');
+            transactionList.innerHTML = '';
+
+            if (transactions.length === 0) {
+                transactionList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No transactions yet. Add some income or expenses to get started!</p>';
+                return;
+            }
+
+            // Sort transactions by date (newest first)
+            const sortedTransactions = transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sortedTransactions.forEach(transaction => {
+                const transactionItem = document.createElement('div');
+                transactionItem.className = 'transaction-item';
+                
+                const currency = currencies.find(c => c.code === transaction.currency);
+                const symbol = currency ? currency.symbol : '';
+                
+                const typeIcon = transaction.type === 'income' ? 'bi-plus-circle' : 'bi-dash-circle';
+                const typeClass = transaction.type === 'income' ? 'income' : 'expense';
+                
+                transactionItem.innerHTML = `
+                    <div class="transaction-info">
+                        <div class="transaction-description">
+                            <i class="bi ${typeIcon}"></i> ${transaction.description}
+                        </div>
+                        <div class="transaction-meta">
+                            ${transaction.category} • ${new Date(transaction.date).toLocaleDateString()} 
+                            ${transaction.notes ? '• ' + transaction.notes : ''}
+                        </div>
+                    </div>
+                    <div class="transaction-amount ${typeClass}">
+                        ${transaction.type === 'income' ? '+' : '-'}${symbol}${transaction.amount.toFixed(2)}
+                    </div>
+                    <div class="mobile-transaction-controls">
+                        <button class="btn btn-danger delete-btn-mobile" data-transaction-id="${transaction.id}" style="margin-left: 10px; padding: 8px 12px;">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+                
+                // Add event listener for delete button (better than inline onclick)
+                const deleteBtn = transactionItem.querySelector('.delete-btn-mobile');
+                deleteBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const transactionId = parseInt(this.getAttribute('data-transaction-id'));
+                    deleteTransaction(transactionId);
+                });
+                
+                transactionList.appendChild(transactionItem);
+            });
+        }
+
+        // Delete transaction with improved mobile support
+        function deleteTransaction(id) {
+            // Convert id to number to ensure proper comparison
+            const transactionId = parseInt(id);
+            
+            // Find the transaction to get details for confirmation
+            const transaction = transactions.find(t => t.id === transactionId);
+            if (!transaction) {
+                alert('Transaction not found!');
+                return;
+            }
+            
+            const confirmMessage = `Are you sure you want to delete this transaction?\n\n${transaction.description}\nAmount: ${transaction.currency || '₹'}${transaction.amount.toFixed(2)}`;
+            
+            if (confirm(confirmMessage)) {
+                // Filter out the transaction
+                const originalLength = transactions.length;
+                transactions = transactions.filter(t => t.id !== transactionId);
+                
+                // Verify deletion worked
+                if (transactions.length === originalLength) {
+                    alert('Error: Could not delete transaction. Please try again.');
+                    return;
+                }
+                
+                // Save and update UI
+                saveTransactions();
+                updateBalance();
+                updateStats();
+                loadTransactions();
+                
+                // Show success message
+                alert('✅ Transaction deleted successfully!');
+            }
+        }
+
+        // Save transactions to localStorage
+        function saveTransactions() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+        }
+
+        // Export data
+        function exportData() {
+            const dataStr = JSON.stringify(transactions, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `finance-tracker-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+        }
+
+        // Clear all data
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                transactions = [];
+                localStorage.removeItem('transactions');
+                updateBalance();
+                updateStats();
+                loadTransactions();
+                alert('All data has been cleared.');
+            }
+        }
+
+        // Switch tabs
+        function switchTab(tabName, clickedElement) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active class from all nav tabs
+            const navTabs = document.querySelectorAll('.nav-tab');
+            navTabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked nav tab (clickedElement is optional)
+            try {
+                const activeTarget = clickedElement || (window.event && window.event.target) || null;
+                if (activeTarget) {
+                    const nav = activeTarget.closest && activeTarget.closest('.nav-tab') ? (activeTarget.closest('.nav-tab')) : activeTarget;
+                    if (nav && nav.classList) nav.classList.add('active');
+                }
+            } catch (e) {
+                // ignore if event not available
+            }
+            
+            // Update stats and chart if history tab is selected
+            if (tabName === 'history') {
+                updateStats();
+            }
+        }
+    </script>
+
+    <!-- COMPREHENSIVE FIXES FOR ALL UI ISSUES -->
+    <script>
+        // COMPREHENSIVE FIXES FOR ALL 3 ISSUES
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // FIX 1: Remove default characters
+            const removeDefaults = () => {
+                document.querySelectorAll('*').forEach(el => {
+                    const text = el.textContent.trim();
+                    if (text === '?' || text === '???' || text === 'undefined' || text === 'null') {
+                        el.style.display = 'none';
+                        console.log('Removed default character:', text);
+                    }
+                });
+            };
+            removeDefaults();
+            setTimeout(removeDefaults, 1000);
+            
+            // FIX 2: Enhanced transaction deletion
+            if (typeof window.deleteTransaction === 'function') {
+                const originalDelete = window.deleteTransaction;
+                window.deleteTransaction = function(id) {
+                    const transactionId = parseInt(id);
+                    const transaction = transactions.find(t => t.id === transactionId);
+                    
+                    if (!transaction) {
+                        alert('Transaction not found!');
+                        return;
+                    }
+                    
+                    if (confirm(`Delete: ${transaction.description}\\nAmount: ₹${transaction.amount.toFixed(2)}?`)) {
+                        transactions = transactions.filter(t => t.id !== transactionId);
+                        localStorage.setItem('transactions', JSON.stringify(transactions));
+                        
+                        // Force complete UI refresh
+                        updateBalance();
+                        updateStats();
+                        loadTransactions();
+                        if (typeof updateChart === 'function') updateChart();
+                        
+                        alert('✅ Transaction deleted!');
+                    }
+                };
+            }
+        });
+
+        // FIX 3: Mobile responsive CSS
+        const mobileCSS = document.createElement('style');
+        mobileCSS.innerHTML = `
+        @media (max-width: 768px) {
+            .monthly-breakdown, .stats-container, .breakdown-container {
+                width: 100% !important;
+                max-width: calc(100vw - 20px) !important;
+                padding: 10px !important;
+                margin: 5px 0 !important;
+                box-sizing: border-box !important;
+                overflow-x: auto !important;
+            }
+            .monthly-breakdown table { 
+                width: 100% !important; 
+                font-size: 12px !important; 
+            }
+            .monthly-breakdown td, .monthly-breakdown th { 
+                padding: 3px !important; 
+                font-size: 11px !important; 
+            }
+            .container { 
+                max-width: 100vw !important; 
+                overflow-x: hidden !important; 
+                padding: 10px 5px !important; 
+            }
+            .transaction-item { 
+                width: 100% !important; 
+                box-sizing: border-box !important; 
+            }
+            span:empty, div:empty { display: none !important; }
+        }
+        `;
+        document.head.appendChild(mobileCSS);
+        
+        console.log('🔧 Applied comprehensive fixes:');
+        console.log('✅ Removed default characters');
+        console.log('✅ Fixed transaction history updates');
+        console.log('✅ Improved mobile responsiveness');
+    </script>
+
+</body>
+</html>

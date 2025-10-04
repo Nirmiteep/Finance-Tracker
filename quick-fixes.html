@@ -1,0 +1,62 @@
+<!-- Add this script tag before closing </body> tag in your index.html -->
+<script src="comprehensive-fixes.js"></script>
+
+<!-- Alternative: Inline fixes (if you prefer) -->
+<script>
+// Quick inline fixes for immediate deployment
+
+// 1. Remove default characters from top right
+document.addEventListener('DOMContentLoaded', function() {
+    const removeDefaults = () => {
+        document.querySelectorAll('*').forEach(el => {
+            if (el.textContent.trim() === '?' || el.textContent.trim() === '???') {
+                el.style.display = 'none';
+            }
+        });
+    };
+    removeDefaults();
+    setTimeout(removeDefaults, 1000);
+});
+
+// 2. Fix transaction deletion UI update
+if (typeof deleteTransaction !== 'undefined') {
+    const originalDelete = deleteTransaction;
+    window.deleteTransaction = function(id) {
+        const result = originalDelete(id);
+        // Force refresh transaction list
+        setTimeout(() => {
+            if (typeof loadTransactions === 'function') loadTransactions();
+            if (typeof updateStats === 'function') updateStats();
+            if (typeof updateBalance === 'function') updateBalance();
+        }, 100);
+        return result;
+    };
+}
+
+// 3. Mobile responsive CSS injection
+const mobileCSS = document.createElement('style');
+mobileCSS.innerHTML = `
+@media (max-width: 768px) {
+    .monthly-breakdown, .stats-container, .breakdown-container {
+        width: 100% !important;
+        max-width: calc(100vw - 20px) !important;
+        padding: 10px !important;
+        margin: 5px 0 !important;
+        box-sizing: border-box !important;
+        overflow-x: auto !important;
+    }
+    .container, .main-container {
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+        padding: 10px 5px !important;
+    }
+    .transaction-item {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    /* Hide default characters */
+    span:empty, div:empty, .default-chars { display: none !important; }
+}
+`;
+document.head.appendChild(mobileCSS);
+</script>
